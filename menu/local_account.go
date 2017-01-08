@@ -33,6 +33,9 @@ func (ths *LocalAccount) InitMenu(parent SubItemInterface, key string) SubItemIn
 	aa := &ActiveAccount{}
 	ths.AddSubItem(aa.InitMenu(ths, "1"))
 
+	cha := &CheckAccounts{}
+	ths.AddSubItem(cha.InitMenu(ths, "1"))
+
 	clear := &ClearAccounts{}
 	ths.AddSubItem(clear.InitMenu(ths, "1"))
 

@@ -90,9 +90,19 @@ func (ths *OperationAccount) GetCountRecords(active string, cnt, offset int64) (
 
 func (ths *OperationAccount) getCountRecords(active string, cnt, offset int64) (ret []map[string][]byte, err error) {
 	if active == "" {
-		sql := "SELECT * FROM `t_account` limit ? offset ?"
+		sql := "SELECT * FROM `t_account` order by id limit ? offset ?"
 		return ths.engine.Query(sql, cnt, offset)
 	}
-	sql := "SELECT * FROM `t_account` WHERE `active`=? limit ? offset ?"
+	sql := "SELECT * FROM `t_account` WHERE `active`=? order by id limit ? offset ?"
 	return ths.engine.Query(sql, active, cnt, offset)
+}
+
+func (ths *OperationAccount) CmdExec(c string, v ...interface{}) error {
+	ths.locker.Lock()
+	defer ths.locker.Unlock()
+	_, err := ths.engine.Exec(c, v...)
+	if err != nil {
+		err = fmt.Errorf("[OperationAccount:CmdExec] %v", err)
+	}
+	return err
 }

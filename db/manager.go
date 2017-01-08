@@ -91,7 +91,7 @@ func (ths *Manager) getPostgresEngine() *xorm.Engine {
 
 // ormRegModels 初始化数据库表
 func (ths *Manager) ormRegModels() {
-	err := ths.dbEngine.Sync(new(TAccount))
+	err := ths.dbEngine.Sync(new(TAccount), new(TStaticsActiveAccount))
 	if err != nil {
 		_L.LoggerInstance.InfoPrint("[Manager:ormRegModels] XORM Engine Sync is err %v\r\n", err)
 		panic(1)
@@ -106,12 +106,25 @@ func (ths *Manager) initOperation() {
 	oa := &OperationAccount{}
 	oa.Init(ths.dbEngine)
 	ths.operations[oa.GetKey()] = oa
+
+	oaas := &OperationActiveAccStatic{}
+	oaas.Init(ths.dbEngine)
+	ths.operations[oaas.GetKey()] = oaas
 }
 
 // GetOperation get opertaion interface
 func (ths *Manager) GetOperation(key string) OperationInterface {
 	ret, _ := ths.operations[key]
 	return ret
+}
+
+// Quary 执行
+func (ths *Manager) Quary(key string, qtype int, v ...interface{}) error {
+	iface := ths.GetOperation(key)
+	if iface != nil {
+		return iface.Quary(qtype, v...)
+	}
+	return fmt.Errorf("Can not find OperationInterface %s ", key)
 }
 
 // GetAccountOperation 得到Account operation

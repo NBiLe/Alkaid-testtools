@@ -3,7 +3,6 @@ package menu
 import (
 	"fmt"
 	"strings"
-	"sync"
 
 	_ac "github.com/fuyaocn/evaluatetools/appconf"
 	_db "github.com/fuyaocn/evaluatetools/db"
@@ -66,15 +65,15 @@ func (ths *ActiveAccount) getBaseAccountInfo() error {
 	ths.baseAcc = new(_str.AccountInfo)
 	ths.baseAcc.Init(kp.Address(), sk)
 
-	wt := new(sync.WaitGroup)
-
 	fmt.Printf(" > reading base account info, please wait ...")
-	wt.Add(1)
-	go ths.baseAcc.GetInfo(_ac.ConfigInstance.GetNetwork(), wt)
-	wt.Wait()
-	fmt.Print("\r")
-	_L.LoggerInstance.InfoPrint(" > Base account balance = %f\r\n", ths.baseAcc.Balance)
-	return nil
+	err = ths.baseAcc.GetInfo(_ac.ConfigInstance.GetNetwork(), nil)
+	if err == nil {
+		fmt.Print("\r")
+		_L.LoggerInstance.InfoPrint(" > Base account balance = %f\r\n", ths.baseAcc.Balance)
+	} else {
+		_L.LoggerInstance.ErrorPrint(" > Check source account has error :\r\n %+v\r\n", err)
+	}
+	return err
 }
 
 func (ths *ActiveAccount) activeAccount() (err error) {

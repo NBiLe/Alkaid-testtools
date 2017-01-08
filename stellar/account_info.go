@@ -8,6 +8,8 @@ import (
 	"strings"
 	"sync"
 
+	"fmt"
+
 	_ac "github.com/fuyaocn/evaluatetools/appconf"
 	_L "github.com/fuyaocn/evaluatetools/log"
 )
@@ -26,6 +28,7 @@ type AccountInfo struct {
 	Sequence string      `json:"sequence"`
 	Assets   []AssetInfo `json:"balances"`
 	Address  string      `json:"address"`
+	Status   int         `json:"status"`
 	Balance  float64
 	sequence uint64
 	Secret   string
@@ -60,25 +63,27 @@ func (ths *AccountInfo) GetInfo(flag string, wt *sync.WaitGroup) error {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		_L.LoggerInstance.ErrorPrint(" ** HTTP Response ERROR\r\n\tReadAll: %v", err)
+		_L.LoggerInstance.ErrorPrint(" ** HTTP Response ERROR\r\n\tReadAll: %+v\r\n", err)
 		return err
 	}
 
 	err = json.Unmarshal(body, ths)
 	if err != nil {
-		_L.LoggerInstance.ErrorPrint(" Unmarshal body has error : %v", err)
+		_L.LoggerInstance.ErrorPrint(" Unmarshal body has error : %+v\r\n", err)
 		return err
 	}
-
-	for _, itm := range ths.Assets {
-		if itm.Type == "native" {
-			ths.Balance, _ = strconv.ParseFloat(itm.Balance, 64)
-			break
+	if ths.Status == 0 {
+		for _, itm := range ths.Assets {
+			if itm.Type == "native" {
+				ths.Balance, _ = strconv.ParseFloat(itm.Balance, 64)
+				break
+			}
 		}
-	}
 
-	ths.sequence, err = strconv.ParseUint(ths.Sequence, 10, 64)
-	return err
+		ths.sequence, err = strconv.ParseUint(ths.Sequence, 10, 64)
+		return err
+	}
+	return fmt.Errorf("Account is not exist")
 }
 
 // GetNextSequence get next sequence

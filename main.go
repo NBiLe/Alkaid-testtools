@@ -9,6 +9,7 @@ import (
 	_db "github.com/fuyaocn/evaluatetools/db"
 	_L "github.com/fuyaocn/evaluatetools/log"
 	_m "github.com/fuyaocn/evaluatetools/menu"
+	_s "github.com/fuyaocn/evaluatetools/statics"
 )
 
 func main() {
@@ -27,6 +28,9 @@ func main() {
 	}
 	_L.LoggerInstance.InfoPrint("Init database ...\r\n")
 	_db.DataBaseInstance = _db.CreateDBInstance(dbConf)
+
+	_L.LoggerInstance.InfoPrint("Init active account statics instance ...\r\n")
+	_s.ActiveAccountStaticsInstance = _s.NewAccActiveController()
 
 	_m.MainMenuInstace.ExecuteFunc(true)
 }

@@ -7,6 +7,7 @@ import (
 	_ac "github.com/fuyaocn/evaluatetools/appconf"
 	_db "github.com/fuyaocn/evaluatetools/db"
 	_L "github.com/fuyaocn/evaluatetools/log"
+	_s "github.com/fuyaocn/evaluatetools/statics"
 	_str "github.com/fuyaocn/evaluatetools/stellar"
 	_kp "github.com/stellar/go/keypair"
 )
@@ -68,6 +69,7 @@ func (ths *AAMainController) Execute() {
 
 		b64 := atc.GetSignature(addr, network, nil)
 		_L.LoggerInstance.DebugPrint("get base 64 : \r\n%s\r\n", b64)
+		_s.ActiveAccountStaticsInstance.Put(b64)
 		base64 = append(base64, b64)
 	}
 
@@ -78,7 +80,7 @@ func (ths *AAMainController) Execute() {
 func (ths *AAMainController) GetRecords() (ret []string) {
 	ths.locker.Lock()
 	defer ths.locker.Unlock()
-	ths.SubAccounts = ths.getRecordFromDB()
+	ths.SubAccounts = ths.GetRecordFromDB()
 	if ths.SubAccounts != nil {
 		ret = make([]string, 0)
 		for _, itm := range ths.SubAccounts {
@@ -88,18 +90,26 @@ func (ths *AAMainController) GetRecords() (ret []string) {
 	return
 }
 
-func (ths *AAMainController) getRecordFromDB() []*_str.AccountInfo {
+func (ths *AAMainController) GetRecordFromDB() []*_str.AccountInfo {
 	opera := _db.DataBaseInstance.GetAccountOperation()
 	if ths.offset == 0 {
 		ths.firstRowID = ths.getFirstRowID(opera)
+		if ths.firstRowID == -1 {
+			return nil
+		}
+		_L.LoggerInstance.DebugPrint("[AAMainController:GetRecordFromDB] get records firstRowID = %d\r\n", ths.firstRowID)
 	}
+
+	_L.LoggerInstance.DebugPrint("[AAMainController:GetRecordFromDB] get records offset = %d\r\n", ths.offset)
+
 	ret, err := opera.GetCountRecords("F", int64(ths.BaseLevel), ths.offset)
 	if err != nil {
-		_L.LoggerInstance.ErrorPrint("[AAMainController:getRecordFromDB] get records has error : \r\n%+v\r\n", err)
+		_L.LoggerInstance.ErrorPrint("[AAMainController:GetRecordFromDB] get records has error : \r\n%+v\r\n", err)
 		return nil
 	}
 	size := len(ret)
 	if size == 0 {
+		_L.LoggerInstance.DebugPrint("[AAMainController:GetRecordFromDB] get records length = 0\r\n")
 		return nil
 	}
 	accs := make([]*_str.AccountInfo, size)
@@ -108,14 +118,18 @@ func (ths *AAMainController) getRecordFromDB() []*_str.AccountInfo {
 		accs[idx].Init(string(ret[idx]["account_id"]), string(ret[idx]["secert_addr"]))
 	}
 	lastid, _ := strconv.ParseInt(string(ret[size-1]["id"]), 10, 64)
+	_L.LoggerInstance.DebugPrint("[AAMainController:GetRecordFromDB] get records LastRowID = %d\r\n", lastid)
 	ths.offset = lastid - ths.firstRowID + 1
 	return accs
 }
 
 func (ths *AAMainController) getFirstRowID(o *_db.OperationAccount) int64 {
-	ret, err := o.GetCountRecords("", 1, 0)
+	ret, err := o.GetCountRecords("F", 1, 0)
 	if err != nil {
 		_L.LoggerInstance.ErrorPrint("[AAMainController:getFirstRowID] get first id has error : \r\n%+v\r\n", err)
+		return -1
+	}
+	if len(ret) == 0 {
 		return -1
 	}
 	retid, _ := strconv.ParseInt(string(ret[0]["id"]), 10, 64)

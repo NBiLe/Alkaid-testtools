@@ -68,9 +68,24 @@ func (ths *ConfigController) GetDateBaseConf() (ret *_db.DatabaseInfo) {
 	return
 }
 
+// GetMainAccountID 获取母ID配置
+func (ths *ConfigController) GetMainAccountID() string {
+	return ths.skeyConfig.String("AccountID")
+}
+
 // GetMainSecretKey 获取母key配置
 func (ths *ConfigController) GetMainSecretKey() string {
 	return ths.skeyConfig.String("SecretKey")
+}
+
+// GetMainIssuerID get IssuerID
+func (ths *ConfigController) GetMainIssuerID() string {
+	return ths.skeyConfig.String("IssuerID")
+}
+
+// GetMainCredit 获取Credit
+func (ths *ConfigController) GetMainCredit() string {
+	return ths.skeyConfig.String("Credit")
 }
 
 // GetHorizonTest get test horizon url

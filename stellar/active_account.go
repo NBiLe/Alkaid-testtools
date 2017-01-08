@@ -9,6 +9,7 @@ import (
 	_ac "github.com/fuyaocn/evaluatetools/appconf"
 	_web "github.com/fuyaocn/evaluatetools/http"
 	_L "github.com/fuyaocn/evaluatetools/log"
+	_s "github.com/fuyaocn/evaluatetools/statics"
 	_b "github.com/stellar/go/build"
 	_kp "github.com/stellar/go/keypair"
 	"github.com/stellar/go/xdr"
@@ -90,20 +91,22 @@ func (ths *ActiveAccount) SendTransaction(flag string, wt *sync.WaitGroup, b64 [
 		if err != nil {
 			return err
 		}
+		_s.ActiveAccountStaticsInstance.SetTimeTicker(idx, slicehttp[idx].StartSend, _s.StartTime)
 		gw.Add(1)
 		go func(w *sync.WaitGroup, index int, http *_web.SocketHttp) {
 			defer w.Done()
 			ret := &Result{}
 			err = http.Response(ret)
+			_s.ActiveAccountStaticsInstance.SetTimeTicker(index, http.CompleteSend, _s.EndTime)
 			if err == nil {
 				if ret.Detail == "" && ret.Hash != "" {
 					http.Result = "Success"
-					fmt.Printf(" *** [%d] Create account transaction is success!! ***\r\n *** [%d] Create account transaction timeSpan = %d  ***\r\n",
-						index, index, http.CompleteSend-http.StartSend)
+					_s.ActiveAccountStaticsInstance.SetResult(index, true)
 					return
 				}
 			}
 			http.Result = "Failure"
+			_s.ActiveAccountStaticsInstance.SetResult(index, false)
 			fmt.Printf(" ### Create account transaction is fail!! ###\r\n ### error : %v\r\n ### Detail : %s\r\n", err, ret.Detail)
 		}(gw, idx, slicehttp[idx])
 	}
@@ -124,4 +127,12 @@ func (ths *ActiveAccount) SaveStatic(h []*_web.SocketHttp, wg *sync.WaitGroup) {
 		_L.LoggerInstance.InfoPrint("[%05d]\t[%s]\t[TimeSpan:%.5f s]\r\n",
 			idx, itm.Result, st)
 	}
+
+	err := _s.ActiveAccountStaticsInstance.Update2DB()
+	if err != nil {
+		_L.LoggerInstance.ErrorPrint(" > Update statics data to database has err : \r\n %+v\r\n", err)
+	} else {
+		_L.LoggerInstance.InfoPrint(" > Update statics data to database complete!")
+	}
+	_s.ActiveAccountStaticsInstance.Clear()
 }

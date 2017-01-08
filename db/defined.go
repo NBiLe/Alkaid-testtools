@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	KeyAccount  = "TAccount"
-	QtGetRecord = iota + 1
+	KeyAccount   = "TAccount"
+	KeyAAStatics = "TStaticsActiveAccount"
+	QtGetRecord  = iota + 1
 	QtCheckRecord
 	QtQuaryAllRecord
 	QtAddRecord
@@ -19,6 +20,7 @@ const (
 	QtClearAllRecord
 	QtGetCount
 	QtGetCountRecords
+	QtCommand
 
 	MySqlDriver    DatabaseType = "mysql"
 	SqliteDriver   DatabaseType = "sqlite3"
@@ -56,4 +58,15 @@ type TAccount struct {
 	LastUpdateTime time.Time `xorm:"DateTime"`
 	UpdateTimeUnix int64
 	Active         string
+}
+
+// TStaticsActiveAccount 统计激活账户
+type TStaticsActiveAccount struct {
+	ID            uint64    `xorm:"'id' pk autoincr"`
+	CreateTime    time.Time `xorm:"DateTime"`
+	Counter       int
+	StartTimeTick int64
+	EndTimeTick   int64
+	SignerB64     string `xorm:"'signer' varchar(65535) notnull"`
+	Success       string `xorm:"varchar(1) notnull"`
 }
