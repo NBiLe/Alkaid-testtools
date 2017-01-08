@@ -45,6 +45,7 @@ func (ths *CAMainController) Execute() {
 			go ths.checkAccInfo(acc, network, ths.wt)
 		}
 		ths.wt.Wait()
+		ths.offset = 0
 	}
 }
 
