@@ -1,7 +1,6 @@
 package stellar
 
 import (
-	"fmt"
 	"net/url"
 	"strings"
 	"sync"
@@ -48,6 +47,7 @@ func (ths *ActiveAccount) GetSignature(addr []string, flag string, wt *sync.Wait
 		))
 	}
 	tx.Mutate(_b.Sequence{Sequence: ths.sequence})
+	_L.LoggerInstance.DebugPrint("Signer sequence : %d\r\n", ths.sequence)
 	ths.sequence++
 	if strings.ToLower(flag) == "live" {
 		tx.Mutate(NBiPublicNetwork)
@@ -62,14 +62,19 @@ func (ths *ActiveAccount) GetSignature(addr []string, flag string, wt *sync.Wait
 }
 
 // SendTransaction send transaction
-func (ths *ActiveAccount) SendTransaction(flag string, wt *sync.WaitGroup, b64 []string) (err error) {
+func (ths *ActiveAccount) SendTransaction(index int, flag string, wt *sync.WaitGroup, b64 []string) (err error) {
 	if wt != nil {
 		defer wt.Done()
 	}
 
+	type ExtrasData struct {
+		ResultXdr string `json:"result_xdr"`
+	}
+
 	type Result struct {
-		Hash   string `json:"hash"`
-		Detail string `json:"detail"`
+		Hash string `json:"hash"`
+		// Detail string `json:"detail"`
+		Extras *ExtrasData `json:"extras"`
 	}
 
 	lenb64 := len(b64)
@@ -91,24 +96,31 @@ func (ths *ActiveAccount) SendTransaction(flag string, wt *sync.WaitGroup, b64 [
 		if err != nil {
 			return err
 		}
-		_s.ActiveAccountStaticsInstance.SetTimeTicker(idx, slicehttp[idx].StartSend, _s.StartTime)
+		_s.ActiveAccountStaticsInstance.SetTimeTicker(index, slicehttp[idx].StartSend, _s.StartTime)
 		gw.Add(1)
-		go func(w *sync.WaitGroup, index int, http *_web.SocketHttp) {
+		go func(w *sync.WaitGroup, subIndex int, http *_web.SocketHttp) {
 			defer w.Done()
 			ret := &Result{}
 			err = http.Response(ret)
-			_s.ActiveAccountStaticsInstance.SetTimeTicker(index, http.CompleteSend, _s.EndTime)
+			_s.ActiveAccountStaticsInstance.SetTimeTicker(subIndex, http.CompleteSend, _s.EndTime)
 			if err == nil {
-				if ret.Detail == "" && ret.Hash != "" {
+				if ret.Extras == nil && ret.Hash != "" {
 					http.Result = "Success"
-					_s.ActiveAccountStaticsInstance.SetResult(index, true)
+					_s.ActiveAccountStaticsInstance.SetResult(subIndex, true)
 					return
 				}
 			}
 			http.Result = "Failure"
-			_s.ActiveAccountStaticsInstance.SetResult(index, false)
-			fmt.Printf(" ### Create account transaction is fail!! ###\r\n ### error : %v\r\n ### Detail : %s\r\n", err, ret.Detail)
-		}(gw, idx, slicehttp[idx])
+			_s.ActiveAccountStaticsInstance.SetResult(subIndex, false)
+			if ret.Extras != nil {
+				tret := &xdr.TransactionResult{}
+				tret.Scan(ret.Extras.ResultXdr)
+				ret.Extras.ResultXdr = tret.Result.Code.String()
+				_L.LoggerInstance.ErrorPrint(" ##[%d]## Create account transaction is fail!! ###\r\n ### error : %v\r\n ### Detail : %s\r\n", subIndex, err, ret.Extras.ResultXdr)
+			} else {
+				_L.LoggerInstance.ErrorPrint(" ##[%d]## Create account transaction is fail!! ###\r\n ### error : %v\r\n ### Detail : Timeout\r\n", subIndex, err)
+			}
+		}(gw, index+idx*1000000, slicehttp[idx])
 	}
 	gw.Wait()
 
@@ -127,12 +139,4 @@ func (ths *ActiveAccount) SaveStatic(h []*_web.SocketHttp, wg *sync.WaitGroup) {
 		_L.LoggerInstance.InfoPrint("[%05d]\t[%s]\t[TimeSpan:%.5f s]\r\n",
 			idx, itm.Result, st)
 	}
-
-	err := _s.ActiveAccountStaticsInstance.Update2DB()
-	if err != nil {
-		_L.LoggerInstance.ErrorPrint(" > Update statics data to database has err : \r\n %+v\r\n", err)
-	} else {
-		_L.LoggerInstance.InfoPrint(" > Update statics data to database complete!")
-	}
-	_s.ActiveAccountStaticsInstance.Clear()
 }

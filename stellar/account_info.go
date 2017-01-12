@@ -81,6 +81,7 @@ func (ths *AccountInfo) GetInfo(flag string, wt *sync.WaitGroup) error {
 		}
 
 		ths.sequence, err = strconv.ParseUint(ths.Sequence, 10, 64)
+		_L.LoggerInstance.DebugPrint(" Current Account info : %+v\r\n", ths)
 		return err
 	}
 	return fmt.Errorf("Account is not exist")
@@ -90,4 +91,14 @@ func (ths *AccountInfo) GetInfo(flag string, wt *sync.WaitGroup) error {
 func (ths *AccountInfo) GetNextSequence() uint64 {
 	ths.sequence++
 	return ths.sequence
+}
+
+// GetCurrentSequence get currnt sequence
+func (ths *AccountInfo) GetCurrentSequence() uint64 {
+	return ths.sequence
+}
+
+// GetResetSequence reset currnt sequence
+func (ths *AccountInfo) GetResetSequence() {
+	ths.sequence--
 }

@@ -9,7 +9,6 @@ import (
 	_L "github.com/fuyaocn/evaluatetools/log"
 	_s "github.com/fuyaocn/evaluatetools/statics"
 	_str "github.com/fuyaocn/evaluatetools/stellar"
-	_kp "github.com/stellar/go/keypair"
 )
 
 // AAMainController 激活账户分发控制器
@@ -21,16 +20,8 @@ type AAMainController struct {
 }
 
 // NewAAMainController 创建激活账户分发控制器
-func NewAAMainController() *AAMainController {
+func NewAAMainController(acc *_str.AccountInfo) *AAMainController {
 	ret := new(AAMainController)
-	sk := _ac.ConfigInstance.GetMainSecretKey()
-	kp, err := _kp.Parse(sk)
-	if err != nil {
-		_L.LoggerInstance.ErrorPrint(" In 'skey.conf', secret key is not valid! \r\n err : %+v\r\n", err)
-		return nil
-	}
-	acc := new(_str.AccountInfo)
-	acc.Init(kp.Address(), sk)
 	ret.Init(1, _ac.ConfigInstance.GetActiveLevel(), _ac.ConfigInstance.GetActiveDepth(), acc)
 	return ret
 }
@@ -46,7 +37,7 @@ func (ths *AAMainController) Init(l, bl, dl int, a *_str.AccountInfo) IControlle
 // Execute 执行
 func (ths *AAMainController) Execute() {
 	var err error
-	// 先从数据库中读取需要激活的账户地址
+	_s.ActiveAccountStaticsInstance.Clear()
 
 	atc := &_str.ActiveAccount{}
 
@@ -58,6 +49,7 @@ func (ths *AAMainController) Execute() {
 	}
 	atc.Init(ths.getAmount(), ths.BaseAccount.Secret, ths.BaseAccount.GetNextSequence())
 	base64 := make([]string, 0)
+	index := 0
 	for {
 		addr := ths.GetRecords()
 		if addr == nil {
@@ -69,11 +61,12 @@ func (ths *AAMainController) Execute() {
 
 		b64 := atc.GetSignature(addr, network, nil)
 		_L.LoggerInstance.DebugPrint("get base 64 : \r\n%s\r\n", b64)
-		_s.ActiveAccountStaticsInstance.Put(b64)
+		_s.ActiveAccountStaticsInstance.Put(index, b64, "active")
+		index++
 		base64 = append(base64, b64)
 	}
 
-	atc.SendTransaction("", nil, base64)
+	atc.SendTransaction(index, "", nil, base64)
 }
 
 // GetRecords 从数据库中读取需要激活的账户地址数组

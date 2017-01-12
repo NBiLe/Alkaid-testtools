@@ -3,6 +3,7 @@ package http
 import (
 	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	_L "github.com/fuyaocn/evaluatetools/log"
 )
 
 // SocketHttp 收发分开处理的http
@@ -46,7 +49,7 @@ func (ths *SocketHttp) Init(address string) (err error) {
 		}
 		ths.conn, err = tls.Dial("tcp", ths.u.Host, config)
 	} else {
-		ths.conn, err = net.Dial("tcp", ths.u.Host)
+		ths.conn, err = net.DialTimeout("tcp", ths.u.Host, 60*time.Second)
 	}
 	if err != nil {
 		return err
@@ -78,16 +81,19 @@ func (ths *SocketHttp) Response(ret interface{}) (err error) {
 	resp, err := ths.client.Read(ths.request)
 	ths.CompleteSend = time.Now().UnixNano()
 	if err != nil {
-		return err
+		return fmt.Errorf(" > Response has error :\r\n%+v", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return fmt.Errorf(" > Response ioutil.ReadAll has error :\r\n%+v", err)
 	}
 
 	// fmt.Println("[ HTTPGet().body ]\r\n\t", string(body))
 	err = json.Unmarshal(body, ret)
+	if err != nil {
+		_L.LoggerInstance.ErrorPrint("JSON unmarshal response body has error : \r\n %+v\r\nBody String = \r\n[\r\n%s\r\n]\r\n", err, string(body))
+	}
 	return err
 }

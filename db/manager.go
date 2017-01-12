@@ -91,7 +91,7 @@ func (ths *Manager) getPostgresEngine() *xorm.Engine {
 
 // ormRegModels 初始化数据库表
 func (ths *Manager) ormRegModels() {
-	err := ths.dbEngine.Sync(new(TAccount), new(TStaticsActiveAccount))
+	err := ths.dbEngine.Sync(new(TMainAccount), new(TAccount), new(TStaticsActiveAccount))
 	if err != nil {
 		_L.LoggerInstance.InfoPrint("[Manager:ormRegModels] XORM Engine Sync is err %v\r\n", err)
 		panic(1)
@@ -110,6 +110,10 @@ func (ths *Manager) initOperation() {
 	oaas := &OperationActiveAccStatic{}
 	oaas.Init(ths.dbEngine)
 	ths.operations[oaas.GetKey()] = oaas
+
+	mao := &MainAccountOperation{}
+	mao.Init(ths.dbEngine)
+	ths.operations[mao.GetKey()] = mao
 }
 
 // GetOperation get opertaion interface

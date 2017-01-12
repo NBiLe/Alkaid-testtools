@@ -68,14 +68,14 @@ func (ths *ConfigController) GetDateBaseConf() (ret *_db.DatabaseInfo) {
 	return
 }
 
-// GetMainAccountID 获取母ID配置
-func (ths *ConfigController) GetMainAccountID() string {
-	return ths.skeyConfig.String("AccountID")
+// GetRootAccountID 获取母ID配置
+func (ths *ConfigController) GetRootAccountID() string {
+	return ths.skeyConfig.String("RootAccountID")
 }
 
-// GetMainSecretKey 获取母key配置
-func (ths *ConfigController) GetMainSecretKey() string {
-	return ths.skeyConfig.String("SecretKey")
+// GetRootSecretKey 获取母key配置
+func (ths *ConfigController) GetRootSecretKey() string {
+	return ths.skeyConfig.String("RootSecretKey")
 }
 
 // GetMainIssuerID get IssuerID
@@ -119,6 +119,11 @@ func (ths *ConfigController) GetCore() string {
 // GetStartBalance get active start balance
 func (ths *ConfigController) GetStartBalance() string {
 	return ths.activConfig.String("startingBalance")
+}
+
+// GetMainStartBalance get main account active start balance
+func (ths *ConfigController) GetMainStartBalance() string {
+	return ths.activConfig.String("mainStartingBalance")
 }
 
 // GetActiveDepth get active depth

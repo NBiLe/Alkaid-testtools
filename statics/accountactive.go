@@ -1,7 +1,10 @@
 package statics
 
 import (
+	"sync"
 	"time"
+
+	"fmt"
 
 	_db "github.com/fuyaocn/evaluatetools/db"
 )
@@ -19,8 +22,9 @@ var ActiveAccountStaticsInstance *AccActiveStaticController
 
 // AccActiveStaticController 激活账户全局唯一实例
 type AccActiveStaticController struct {
-	acc   []*AccActiveStatic
-	CTime time.Time
+	acc    map[int]*AccActiveStatic
+	CTime  time.Time
+	locker *sync.Mutex
 }
 
 // NewAccActiveController new account active controller
@@ -31,7 +35,8 @@ func NewAccActiveController() *AccActiveStaticController {
 
 // Init init
 func (ths *AccActiveStaticController) Init() *AccActiveStaticController {
-	ths.acc = make([]*AccActiveStatic, 0)
+	ths.acc = make(map[int]*AccActiveStatic)
+	ths.locker = new(sync.Mutex)
 	return ths
 }
 
@@ -41,25 +46,55 @@ func (ths *AccActiveStaticController) Clear() {
 }
 
 // Put signed Base64 string
-func (ths *AccActiveStaticController) Put(signer string) {
+func (ths *AccActiveStaticController) Put(idx int, signer string, action string) {
+	ths.locker.Lock()
+	defer ths.locker.Unlock()
 	lenAcc := len(ths.acc)
 	if lenAcc == 0 {
 		ths.CTime = time.Now()
 	}
 	accact := NewAccActiveStatic()
 	accact.SetSignature(signer)
+	accact.Index = idx
 	accact.Counter = lenAcc + 1
 	accact.CreateTime = ths.CTime
-	ths.acc = append(ths.acc, accact)
+	accact.Action = action
+	ths.acc[idx] = accact
+}
+
+func (ths *AccActiveStaticController) PrintAccs() {
+	for i := 0; i < len(ths.acc); i++ {
+		fmt.Printf("[%d] %+v\r\n", i, ths.acc[i])
+	}
+	// fmt.Printf("Accounts = \r\n%+v\r\n", ths.acc)
 }
 
 // SetTimeTicker set time ticker
 func (ths *AccActiveStaticController) SetTimeTicker(index int, t int64, tick TimeTicker) {
+	ths.locker.Lock()
+	defer ths.locker.Unlock()
+	if index >= 1000000 {
+		acc, ok := ths.acc[index]
+		if !ok {
+			acc, _ = ths.acc[index%1000000]
+			ths.Put(index, acc.SignerB64, acc.Action)
+		}
+		acc.SetTimeTick(tick, t)
+	}
 	ths.acc[index].SetTimeTick(tick, t)
 }
 
 // SetResult set result
 func (ths *AccActiveStaticController) SetResult(index int, b bool) {
+	ths.locker.Lock()
+	defer ths.locker.Unlock()
+	if index >= 1000000 {
+		acc, ok := ths.acc[index]
+		if !ok {
+			acc, _ = ths.acc[index%1000000]
+			ths.Put(index, acc.SignerB64, acc.Action)
+		}
+	}
 	if b {
 		ths.acc[index].Success = "T"
 	} else {
@@ -69,13 +104,16 @@ func (ths *AccActiveStaticController) SetResult(index int, b bool) {
 
 // Update2DB 统计结果入库
 func (ths *AccActiveStaticController) Update2DB() error {
+	ths.locker.Lock()
+	defer ths.locker.Unlock()
 	lenAcc := len(ths.acc)
 	save := make([]*_db.TStaticsActiveAccount, lenAcc)
-	for i := 0; i < lenAcc; i++ {
-		save[i] = &(ths.acc[i].TStaticsActiveAccount)
+	idx := 0
+	for _, itm := range ths.acc {
+		save[idx] = &(itm.TStaticsActiveAccount)
+		idx++
 	}
-	err := _db.DataBaseInstance.Quary(_db.KeyAAStatics, _db.QtAddRecords, save)
-	return err
+	return _db.DataBaseInstance.Quary(_db.KeyAAStatics, _db.QtAddRecords, save)
 }
 
 // AccActiveStatic account active statics

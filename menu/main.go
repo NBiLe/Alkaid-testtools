@@ -28,6 +28,9 @@ func init() {
 	}
 	MainMenuInstace.Exec = MainMenuInstace.execute
 
+	ma := &MainAccount{}
+	MainMenuInstace.AddSubItem(ma.InitMenu(MainMenuInstace, "0"))
+
 	la := &LocalAccount{}
 	MainMenuInstace.AddSubItem(la.InitMenu(MainMenuInstace, "0"))
 

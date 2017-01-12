@@ -25,7 +25,7 @@ func (ths *CheckAccounts) execute(isSync bool) {
 	_L.LoggerInstance.Info(" ** Check local stellar accounts ** \r\n")
 	_L.LoggerInstance.InfoPrint(" > Check all account from local database BEGIN ...\r\n")
 	ca := &_dis.CAMainController{}
-	ca.Init(0, 0, 0, nil)
+	ca.Init(0, 1000, 0, nil)
 	ca.Execute()
 	_L.LoggerInstance.InfoPrint(" > Check all account from local database Complete\r\n")
 
